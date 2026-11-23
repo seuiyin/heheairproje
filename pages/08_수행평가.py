@@ -14,19 +14,45 @@ st.set_page_config(
 st.title("🎧 시대별 인기 음악 분석")
 st.write("음악 데이터를 통해 시대에 따른 인기 음악의 변화를 알아보자!")
 
-# CSV 파일 위치 찾기
-FILE_PATH = Path(__file__).resolve().parent.parent / "music.csv"
+# =================================
+# 1. CSV 파일 불러오기
+# =================================
 
-# 데이터 불러오기
+# 현재 py 파일의 위치: aiproject/pages
+# 상위 폴더: aiproject
+BASE_DIR = Path(__file__).resolve().parent.parent
+FILE_PATH = BASE_DIR / "music.csv"
+
+# 파일 존재 확인
+if not FILE_PATH.exists():
+    st.error("music.csv 파일을 찾을 수 없습니다.")
+
+    st.write("현재 파이썬 파일 위치:")
+    st.code(str(Path(__file__).resolve()))
+
+    st.write("CSV 파일을 찾는 위치:")
+    st.code(str(FILE_PATH))
+
+    st.write("상위 폴더에 있는 파일 목록:")
+    if BASE_DIR.exists():
+        st.write([p.name for p in BASE_DIR.iterdir()])
+    else:
+        st.write("상위 폴더를 찾을 수 없습니다.")
+
+    st.stop()
+
+# CSV 불러오기
 try:
     df = pd.read_csv(FILE_PATH, encoding="utf-8-sig")
-
-except FileNotFoundError:
-    st.error("music.csv 파일을 찾을 수 없습니다.")
-    st.write("찾으려는 파일 위치:")
-    st.code(str(FILE_PATH))
-    st.write("GitHub 최상위 폴더에 music.csv가 있는지 확인해 주세요.")
+except Exception as e:
+    st.error("CSV 파일을 읽는 중 오류가 발생했습니다.")
+    st.code(str(e))
     st.stop()
+
+
+# =================================
+# 2. 데이터 전처리
+# =================================
 
 # 발매 연도 추출
 df["release_year"] = pd.to_numeric(
@@ -36,20 +62,20 @@ df["release_year"] = pd.to_numeric(
     errors="coerce"
 )
 
-# 인기도 숫자로 변환
+# 인기도 숫자 변환
 df["track_popularity"] = pd.to_numeric(
     df["track_popularity"],
     errors="coerce"
 )
 
-# 분석 가능한 데이터만 사용
+# 필요한 데이터만 남기기
 df = df.dropna(
     subset=["release_year", "track_popularity"]
 )
 
 df["release_year"] = df["release_year"].astype(int)
 
-# 1950~2026년 데이터만 사용
+# 1950년부터 2026년까지
 df = df[
     (df["release_year"] >= 1950) &
     (df["release_year"] <= 2026)
@@ -59,7 +85,11 @@ if df.empty:
     st.error("분석할 수 있는 음악 데이터가 없습니다.")
     st.stop()
 
-# 연도 선택
+
+# =================================
+# 3. 연도 선택
+# =================================
+
 st.subheader("📅 분석할 기간 선택")
 
 min_year = int(df["release_year"].min())
@@ -72,7 +102,6 @@ year_range = st.slider(
     value=(min_year, max_year)
 )
 
-# 선택한 기간의 데이터
 selected_df = df[
     (df["release_year"] >= year_range[0]) &
     (df["release_year"] <= year_range[1])
@@ -82,7 +111,11 @@ if selected_df.empty:
     st.warning("선택한 기간에 데이터가 없습니다.")
     st.stop()
 
-# 주요 통계
+
+# =================================
+# 4. 주요 통계
+# =================================
+
 st.subheader("📊 음악 데이터 요약")
 
 col1, col2, col3 = st.columns(3)
@@ -102,7 +135,11 @@ col3.metric(
     f"{year_range[0]}~{year_range[1]}년"
 )
 
-# 연도별 통계
+
+# =================================
+# 5. 연도별 통계
+# =================================
+
 yearly = selected_df.groupby("release_year").agg(
     평균인기도=("track_popularity", "mean"),
     발매곡수=("track_name", "count")
@@ -129,7 +166,11 @@ ax.grid(True, alpha=0.3)
 st.pyplot(fig)
 plt.close(fig)
 
-# 연도별 발매 곡 수 그래프
+
+# =================================
+# 6. 연도별 발매 곡 수
+# =================================
+
 st.subheader("📊 연도별 발매 곡 수")
 
 fig, ax = plt.subplots(figsize=(12, 5))
@@ -147,9 +188,12 @@ ax.grid(axis="y", alpha=0.3)
 st.pyplot(fig)
 plt.close(fig)
 
-st.divider()
 
-# 인기곡 TOP 10
+# =================================
+# 7. 인기곡 TOP 10
+# =================================
+
+st.divider()
 st.subheader("🏆 선택한 기간의 인기곡 TOP 10")
 
 top10 = (
@@ -186,7 +230,11 @@ st.dataframe(
     hide_index=True
 )
 
-# 분석 결과
+
+# =================================
+# 8. 분석 결과
+# =================================
+
 st.divider()
 st.subheader("💡 데이터 분석 결과")
 
