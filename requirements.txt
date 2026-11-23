@@ -1,6 +1,5 @@
 streamlit
 pydeck
-streamlit
 pandas
 matplotlib
 numpy
